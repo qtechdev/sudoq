@@ -22,6 +22,15 @@ namespace sudoq {
 
   void display(const box &b, const int y, const int x);
   void display(const grid &g);
+
+  std::array<box, 9> as_rows(const grid &g);
+  std::array<box, 9> as_cols(const grid &g);
+
+  box get_row(const grid &g, const int r);
+  box get_col(const grid &g, const int c);
+
+  bool check(const grid &g);
+  bool check(const box &b);
 }
 
 

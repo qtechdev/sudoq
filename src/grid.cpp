@@ -1,4 +1,7 @@
+#include <algorithm> // std::sort, std::transform
 #include <ncurses.h>
+
+#include <sstream>
 
 #include "grid.hpp"
 
@@ -85,4 +88,125 @@ void sudoq::display(const grid &g) {
   }
 
   refresh();
+}
+
+std::array<sudoq::box, 9> sudoq::as_rows(const grid &g) {
+  std::array<box, 9> boxes;
+
+  for (int i = 0; i < 9; ++i) {
+    boxes[i] = get_row(g, i);
+  }
+
+  return boxes;
+}
+
+std::array<sudoq::box, 9> sudoq::as_cols(const grid &g) {
+  std::array<box, 9> boxes;
+
+  for (int i = 0; i < 9; ++i) {
+    boxes[i] = get_col(g, i);
+  }
+
+  return boxes;
+}
+
+sudoq::box sudoq::get_row(const grid &g, const int r) {
+  int a = (r / 3) * 3; // box start index
+  int b = (r % 3) * 3; // cell start index
+
+  box bx = {
+    g.boxes[a    ].cells[b    ], g.boxes[a    ].cells[b + 1], g.boxes[a    ].cells[b + 2],
+    g.boxes[a + 1].cells[b    ], g.boxes[a + 1].cells[b + 1], g.boxes[a + 1].cells[b + 2],
+    g.boxes[a + 2].cells[b    ], g.boxes[a + 2].cells[b + 1], g.boxes[a + 2].cells[b + 2]
+  };
+
+  return bx;
+}
+
+sudoq::box sudoq::get_col(const grid &g, const int c) {
+  int a = (c / 3); // box start index
+  int b = (c % 3); // cell start index
+
+  box bx = {
+    g.boxes[a    ].cells[b    ], g.boxes[a    ].cells[b + 3], g.boxes[a    ].cells[b + 6],
+    g.boxes[a + 3].cells[b    ], g.boxes[a + 3].cells[b + 3], g.boxes[a + 3].cells[b + 6],
+    g.boxes[a + 6].cells[b    ], g.boxes[a + 6].cells[b + 3], g.boxes[a + 6].cells[b + 6]
+  };
+
+  return bx;
+}
+
+
+bool sudoq::check(const grid &g) {
+  int i;
+
+  i = 0;
+  for (const box &b : g.boxes) {
+    if (!check(b)) {
+      move(14, 0);
+      printw("invalid box -> ");
+      addch(i + '0');
+      refresh();
+      return false;
+    }
+    ++i;
+  }
+
+  i = 0;
+  for (const box &b : as_rows(g)) {
+    if (!check(b)) {
+      move(14, 0);
+      printw("invalid row -> ");
+      addch(i + '0');
+      refresh();
+      return false;
+    }
+    ++i;
+  }
+
+  i = 0;
+  for (const box &b : as_cols(g)) {
+    if (!check(b)) {
+      move(14, 0);
+      printw("invalid col -> ");
+      addch(i + '0');
+      refresh();
+      return false;
+    }
+    ++i;
+  }
+
+  return true;
+}
+
+bool sudoq::check(const box &b) {
+  std::array<char, 9> cells;
+  std::transform(
+    b.cells.begin(), b.cells.end(), cells.begin(),
+    [](const cell &c){
+      return c.value;
+    }
+  );
+
+  std::sort(cells.begin(), cells.end());
+
+  std::array<char, 9> target = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
+
+
+  std::stringstream ss;
+  ss << "{ ";
+  for (const int &i : cells) {
+    ss << i << " ";
+  }
+  ss << "} -> { ";
+  for (const int &i : target) {
+    ss << i << " ";
+  }
+  ss << "}";
+
+  move(15, 0);
+  printw(ss.str().c_str());
+  refresh();
+
+  return (cells == target);
 }
