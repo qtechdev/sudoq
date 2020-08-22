@@ -21,6 +21,8 @@ sudoq::grid &sudoq::grid::operator=(
     boxes[i] = data[i];
   }
 
+  this->boxes = as_rows(*this);
+
   return *this;
 }
 
