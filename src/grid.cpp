@@ -5,7 +5,8 @@
 
 #include "grid.hpp"
 
-sudoq::box &sudoq::box::operator=(const std::array<char, 9> &data) {
+// struct group
+sudoq::group &sudoq::group::operator=(const std::array<char, 9> &data) {
   for (int i = 0; i < 9; ++i) {
     cells[i].value = data[i];
     cells[i].is_given = (data[i] != ' ');
@@ -14,46 +15,33 @@ sudoq::box &sudoq::box::operator=(const std::array<char, 9> &data) {
   return *this;
 }
 
+// struct grid
 sudoq::grid &sudoq::grid::operator=(
   const std::array<std::array<char, 9>, 9> &data
 ) {
   for (int i = 0; i < 9; ++i) {
-    boxes[i] = data[i];
+    rows[i] = data[i];
   }
-
-  this->boxes = as_rows(*this);
 
   return *this;
 }
 
 void sudoq::grid::insert(const int y, const int x, const char c) {
-  int box_ypos = y / 3;
-  int box_xpos = x / 3;
-  int box_index = (box_ypos * 3) + box_xpos;
-
-  int cell_ypos = y % 3;
-  int cell_xpos = x % 3;
-  int cell_index = (cell_ypos * 3) + cell_xpos;
-
-  cell &cref = boxes[box_index].cells[cell_index];
+  cell &cref = rows[y].cells[x];
   if (!cref.is_given) {
     cref.value = c;
   }
 }
 
-void sudoq::display(const box &b, const int y, const int x) {
-  attroff(A_BOLD);
-  for (int j = 0; j < 3 ; ++j) {
-    move(y + j, x);
-    for (int i = 0; i < 3 ; ++i) {
-      int index = (j * 3) + i;
-      attroff(A_BOLD);
-      if (b.cells[index].is_given) {
-        attron(A_BOLD);
-      }
+// display functions
+void sudoq::display(const group &row, const int y) {
+  const int skip_rows = y / 3;
 
-      addch(b.cells[index].value);
-    }
+  for (int i = 0; i < 9 ; ++i) {
+    const int skip_cols = i / 3;
+
+    row.cells[i].is_given ? attron(A_BOLD) : attroff(A_BOLD);
+    mvaddch(y + skip_rows, i + skip_cols, row.cells[i].value);
   }
 
   refresh();
@@ -78,84 +66,19 @@ void sudoq::display(const grid &g) {
   printw("   |   |   \n");
   printw("   |   |   \n");
 
-  for (int j = 0; j < 3 ; ++j) {
-    for (int i = 0; i < 3 ; ++i) {
-      int index = (j * 3) + i;
-
-      int y_pos = j * (box_height + hr_height);
-      int x_pos = i * (box_width + vr_width);
-
-      display(g.boxes[index], y_pos, x_pos);
-    }
+  for (int i = 0; i < 9 ; ++i) {
+    display(g.rows[i], i);
   }
 
   refresh();
 }
 
-std::array<sudoq::box, 9> sudoq::as_rows(const grid &g) {
-  std::array<box, 9> boxes;
-
-  for (int i = 0; i < 9; ++i) {
-    boxes[i] = get_row(g, i);
-  }
-
-  return boxes;
-}
-
-std::array<sudoq::box, 9> sudoq::as_cols(const grid &g) {
-  std::array<box, 9> boxes;
-
-  for (int i = 0; i < 9; ++i) {
-    boxes[i] = get_col(g, i);
-  }
-
-  return boxes;
-}
-
-sudoq::box sudoq::get_row(const grid &g, const int r) {
-  int a = (r / 3) * 3; // box start index
-  int b = (r % 3) * 3; // cell start index
-
-  box bx = {
-    g.boxes[a    ].cells[b    ], g.boxes[a    ].cells[b + 1], g.boxes[a    ].cells[b + 2],
-    g.boxes[a + 1].cells[b    ], g.boxes[a + 1].cells[b + 1], g.boxes[a + 1].cells[b + 2],
-    g.boxes[a + 2].cells[b    ], g.boxes[a + 2].cells[b + 1], g.boxes[a + 2].cells[b + 2]
-  };
-
-  return bx;
-}
-
-sudoq::box sudoq::get_col(const grid &g, const int c) {
-  int a = (c / 3); // box start index
-  int b = (c % 3); // cell start index
-
-  box bx = {
-    g.boxes[a    ].cells[b    ], g.boxes[a    ].cells[b + 3], g.boxes[a    ].cells[b + 6],
-    g.boxes[a + 3].cells[b    ], g.boxes[a + 3].cells[b + 3], g.boxes[a + 3].cells[b + 6],
-    g.boxes[a + 6].cells[b    ], g.boxes[a + 6].cells[b + 3], g.boxes[a + 6].cells[b + 6]
-  };
-
-  return bx;
-}
-
-
+// checkers
 bool sudoq::check(const grid &g) {
   int i;
 
   i = 0;
-  for (const box &b : g.boxes) {
-    if (!check(b)) {
-      move(14, 0);
-      printw("invalid box -> ");
-      addch(i + '0');
-      refresh();
-      return false;
-    }
-    ++i;
-  }
-
-  i = 0;
-  for (const box &b : as_rows(g)) {
+  for (const group &b : g.rows) {
     if (!check(b)) {
       move(14, 0);
       printw("invalid row -> ");
@@ -167,7 +90,7 @@ bool sudoq::check(const grid &g) {
   }
 
   i = 0;
-  for (const box &b : as_cols(g)) {
+  for (const group &b : as_cols(g)) {
     if (!check(b)) {
       move(14, 0);
       printw("invalid col -> ");
@@ -178,13 +101,25 @@ bool sudoq::check(const grid &g) {
     ++i;
   }
 
+  i = 0;
+  for (const group &b : as_boxes(g)) {
+    if (!check(b)) {
+      move(14, 0);
+      printw("invalid box -> ");
+      addch(i + '0');
+      refresh();
+      return false;
+    }
+    ++i;
+  }
+
   return true;
 }
 
-bool sudoq::check(const box &b) {
+bool sudoq::check(const group &g) {
   std::array<char, 9> cells;
   std::transform(
-    b.cells.begin(), b.cells.end(), cells.begin(),
+    g.cells.begin(), g.cells.end(), cells.begin(),
     [](const cell &c){
       return c.value;
     }
@@ -211,4 +146,48 @@ bool sudoq::check(const box &b) {
   refresh();
 
   return (cells == target);
+}
+
+// conversions
+std::array<sudoq::group, 9> sudoq::as_cols(const grid &g) {
+  std::array<group, 9> cols;
+
+  for (int i = 0; i < 9; ++i) {
+    cols[i] = get_col(g, i);
+  }
+
+  return cols;
+}
+
+std::array<sudoq::group, 9> sudoq::as_boxes(const grid &g) {
+  std::array<group, 9> boxes;
+
+  for (int i = 0; i < 9; ++i) {
+    boxes[i] = get_box(g, i);
+  }
+
+  return boxes;
+}
+
+sudoq::group sudoq::get_col(const grid &g, const int c) {
+  group b;
+
+  for (int i = 0; i < 9; ++i) {
+    b.cells[i] = g.rows[i].cells[c];
+  }
+
+  return b;
+}
+
+sudoq::group sudoq::get_box(const grid &g, const int n) {
+  int a = (n / 3) * 3; // row start index
+  int b = (n % 3) * 3; // col start index
+
+  group box = {
+    g.rows[a  ].cells[b  ], g.rows[a  ].cells[b+1], g.rows[a  ].cells[b+2],
+    g.rows[a+1].cells[b  ], g.rows[a+1].cells[b+1], g.rows[a+1].cells[b+2],
+    g.rows[a+2].cells[b  ], g.rows[a+2].cells[b+1], g.rows[a+2].cells[b+2]
+  };
+
+  return box;
 }

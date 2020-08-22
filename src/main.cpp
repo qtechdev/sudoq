@@ -100,8 +100,8 @@ int main() {
       }; break;
     }
 
-    cursor.x_pos = std::clamp(cursor.x_pos, 0, 9);
-    cursor.y_pos = std::clamp(cursor.y_pos, 0, 9);
+    cursor.x_pos = std::clamp(cursor.x_pos, 0, 8);
+    cursor.y_pos = std::clamp(cursor.y_pos, 0, 8);
 
     switch (ch) {
       case ' ': grid.insert(cursor.y_pos, cursor.x_pos, ' '); break;
