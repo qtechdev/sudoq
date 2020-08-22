@@ -44,7 +44,8 @@ enum class keys {
   S_DOWN    = KEY_SF,
   S_RIGHT   = KEY_SRIGHT,
   //
-  CHECK     = KEY_F(3)
+  CHECK     = KEY_F(3),
+  CLEAR     = KEY_DC
 };
 
 struct cursor_info {
@@ -72,6 +73,10 @@ int main() {
   refresh();
 
   for (int ch = getch(); ch != KEY_F(4); ch = getch()) {
+    move(13, 0);
+    clrtobot();
+    refresh();
+
     switch (keys(ch)) {
       case keys::UP: --cursor.y_pos; break;
       case keys::LEFT: --cursor.x_pos; break;
@@ -81,6 +86,7 @@ int main() {
       case keys::S_LEFT: cursor.x_pos -= 3; break;
       case keys::S_DOWN: cursor.y_pos += 3; break;
       case keys::S_RIGHT: cursor.x_pos += 3; break;
+      case keys::CLEAR: ch = ' '; break;
       case keys::CHECK: {
         bool x = check(grid);
         move(13, 0);
